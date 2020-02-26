@@ -44,7 +44,7 @@ class LinkForm extends React.Component {
   }
 
   transform = async input => {
-    await fetch(`http://paulius.local:3001/api?q=${input}`, {
+    await fetch(`https://podlinker.now.sh/api/links?q=${input}`, {
       mode: "cors",
       headers: { "Content-Type": "application/json" }
     })
