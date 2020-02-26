@@ -5,10 +5,12 @@ Also great for sharing your podcast link on socials. One link for Apple, Google,
 
 Enter a link from this source
 - [] Apple Podcasts
+- [x] Castro
 
 To get a link for this platform: 
+- [x] Apple Podcasts
 - [] Google Podcasts
-- [] Spotify
+- [x] Spotify
 - [] Castro
 - [] Overcast
 - [] Stitcher

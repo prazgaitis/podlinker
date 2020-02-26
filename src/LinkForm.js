@@ -1,4 +1,5 @@
 import React from "react";
+import fetch from "node-fetch";
 
 const isItunesEpisodeLink = link => {
   return link.match(/(https:\/\/podcasts\.apple\.com\/us\/podcast\/.*)/g);
@@ -42,20 +43,20 @@ class LinkForm extends React.Component {
     this.state = { value: "" };
   }
 
-  transform = input => {
-    if (isItunesShowLink(input)) {
-      this.setState({ results: buildAllFromItunesLink(input) });
-    }
-
-    if (isItunesEpisodeLink(input)) {
-      console.log("iTunes link: ", input);
-      let itunesId = itunesIdFromLink(input);
-
-      console.log("Castro link: ", `https://castro.fm/itunes/${itunesId}`);
-    }
-
-    if (isCastroLink(input)) {
-    }
+  transform = async input => {
+    await fetch(`http://paulius.local:3001/api?q=${input}`, {
+      mode: "cors",
+      headers: { "Content-Type": "application/json" }
+    })
+      .then(res => {
+        console.log(res);
+        return res.json();
+      })
+      .then(res => {
+        console.log("RESULTS", res);
+        this.setState({ results: res.urls });
+      })
+      .catch(err => console.error(err));
   };
 
   handleChange = event => {
@@ -66,7 +67,7 @@ class LinkForm extends React.Component {
     const url = this.state.value;
 
     event.preventDefault();
-    console.log(url, this.transform(url));
+    this.transform(url);
   };
 
   render() {
@@ -80,19 +81,21 @@ class LinkForm extends React.Component {
             value={value}
             onChange={this.handleChange}
           />
+          <button type="submit" className="button is-link">
+            Go
+          </button>
         </form>
         {results !== undefined && (
           <ul>
-            {Object.entries(results).map(res => {
+            {results.map(item => {
               return (
                 <li key={Math.random()}>
-                  <a target="_blank" rel="noopener noreferrer" href={res[1]}>
-                    {res[0]}
+                  <a target="_blank" rel="noopener noreferrer" href={item[1]}>
+                    {item[0]}
                   </a>
                 </li>
               );
             })}
-            <li></li>
           </ul>
         )}
       </div>
