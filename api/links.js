@@ -170,8 +170,12 @@ const buildLinks = async (source, link) => {
     const { url } = await main(iTunesId, title);
     links.push(["itunes", url]);
 
-    const spotifyResult = await spotify(title);
-    links.push(["spotify", spotifyResult.url]);
+    try {
+      const spotifyResult = await spotify(title);
+      links.push(["spotify", spotifyResult.url]);
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   return links;
