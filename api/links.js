@@ -177,8 +177,7 @@ const buildLinks = async (source, link) => {
   return links;
 };
 
-
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
   console.log(req.query);
   const startingUrl = req.query.q;
   const source = detectSource(startingUrl);
@@ -188,4 +187,4 @@ module.exports = (req, res) => {
 
   console.log("RESULT", result);
   res.status(200).json({ urls: result });
-}
+};
