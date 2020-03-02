@@ -1,8 +1,6 @@
 {
-    "build": {
-        "env": {
-            "SPOTIFY_CLIENT_SECRET": "@spotify_client_secret",
-            "SPOTIFY_CLIENT_ID": "@spotify_client_id"
-        }
+    "env": {
+        "SPOTIFY_CLIENT_SECRET": "@spotify_client_secret",
+        "SPOTIFY_CLIENT_ID": "@spotify_client_id"
     }
 }

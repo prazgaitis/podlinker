@@ -1,2 +1,4 @@
 node_modules
 .spotify*
+.env.build
+.now

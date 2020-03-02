@@ -1,5 +1,9 @@
 import React from "react";
-import fetch from "node-fetch";
+import PodResultsContainer from "./PodResultsContainer";
+const API_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://podlinker.now.sh/"
+    : "http://localhost:3001/";
 
 const isItunesEpisodeLink = link => {
   return link.match(/(https:\/\/podcasts\.apple\.com\/us\/podcast\/.*)/g);
@@ -40,21 +44,19 @@ const buildAllFromItunesLink = link => {
 class LinkForm extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { value: "" };
+    this.state = { value: "", title: "", loading: false };
   }
 
   transform = async input => {
-    await fetch(`https://podlinker.now.sh/api/links?q=${input}`, {
+    this.setState({ loading: true });
+    await fetch(`${API_URL}api/links?q=${input}`, {
       mode: "cors",
       headers: { "Content-Type": "application/json" }
     })
-      .then(res => {
-        console.log(res);
-        return res.json();
-      })
+      .then(res => res.json())
       .then(res => {
         console.log("RESULTS", res);
-        this.setState({ results: res.urls });
+        this.setState({ title: res.title, results: res.urls, loading: false });
       })
       .catch(err => console.error(err));
   };
@@ -71,32 +73,31 @@ class LinkForm extends React.Component {
   };
 
   render() {
-    const { results, value } = this.state;
+    const { results, value, title, loading } = this.state;
     return (
       <div className="container is-fluid">
         <form onSubmit={this.handleSubmit}>
-          <input
-            type="text"
-            className="input is-primary"
-            value={value}
-            onChange={this.handleChange}
-          />
-          <button type="submit" className="button is-link">
-            Go
-          </button>
+          <div className="field is-grouped">
+            <div className="control is-expanded">
+              <input
+                type="text"
+                className="input is-primary"
+                value={value}
+                onChange={this.handleChange}
+              />
+            </div>
+            <div className="control">
+              <button
+                type="submit"
+                className={`button is-primary ${loading ? "is-loading" : ""}`}
+              >
+                Go
+              </button>
+            </div>
+          </div>
         </form>
         {results !== undefined && (
-          <ul>
-            {results.map(item => {
-              return (
-                <li key={Math.random()}>
-                  <a target="_blank" rel="noopener noreferrer" href={item[1]}>
-                    {item[0]}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
+          <PodResultsContainer results={results} title={title} />
         )}
       </div>
     );
