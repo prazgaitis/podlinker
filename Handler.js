@@ -2,18 +2,7 @@ const fetch = require("node-fetch");
 const cheerio = require("cheerio");
 const similar = require("string-similarity");
 const { URLSearchParams } = require("url");
-
-const CASTRO_EPISODE_REGEX = /https:\/\/castro.fm\/episode\/\w+/g;
-const CASTRO_SHOW_REGEX = /https:\/\/castro.fm\/podcast\/.+/g;
-
-const ITUNES_EPISODE_REGEX = /https:\/\/podcasts.apple.com\/\w+\/podcast\/.+/g;
-const ITUNES_SHOW_REGEX = ITUNES_EPISODE_REGEX;
-
-const SPOTIFY_SHOW_REGEX = /https:\/\/open.spotify.com\/show\/\w+/g;
-const SPOTIFY_EPISODE_REGEX = /https:\/\/open.spotify.com\/episode\/\w+/g;
-
-const OVERCAST_SHOW_REGEX = /https:\/\/overcast.fm\/itunes\d+/g;
-const OVERCAST_EPISODE_REGEX = /https:\/\/overcast.fm\/\+\w+/g;
+const Helper = require("./src/Helper");
 
 const spotifyToken = async () => {
   const { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } = process.env;
@@ -86,6 +75,23 @@ const castroToItunes = async link => {
   return { iTunesId, title };
 };
 
+// Get Title from Overcast Episode link
+const overcastShowToItunes = async link => {
+  const dom = await fetch(link)
+    .then(data => data.text())
+    .catch(e => console.error(e));
+
+  const $ = cheerio.load(dom);
+  const title = $("h2")[0].text();
+
+  const iTunesId = Array.from($("a")) // get all links
+    .map(n => n.attribs.href) // get href strings
+    .filter(url => url.match(/http:\/\/pca.st\/itunes\//g))[0] // get the pocketcasts url
+    .match(/\d+/)[0]; // get the itunes ID from the pocketcasts url
+
+  return { iTunesId, title };
+};
+
 // FROM itunes show ID and title TO iTunes Direct link
 const main = async (iTunesShowID, podTitle) => {
   // this will probably expire at some point
@@ -132,41 +138,34 @@ const main = async (iTunesShowID, podTitle) => {
   return null;
 };
 
-const detectSource = link => {
-  // if episode
-  if (link.match(CASTRO_EPISODE_REGEX)) {
-    return "castro_episode";
-  } else if (link.match(ITUNES_EPISODE_REGEX)) {
-    return "itunes_episode";
-  } else if (link.match(SPOTIFY_EPISODE_REGEX)) {
-    return "spotify_episode";
-  } else if (link.match(OVERCAST_EPISODE_REGEX)) {
-    return "overcast_episode";
-    // check if its a show url
-  } else if (link.match(ITUNES_SHOW_REGEX)) {
-    return "itunes_show";
-  } else if (link.match(SPOTIFY_SHOW_REGEX)) {
-    return "spotify_show";
-  } else if (link.match(OVERCAST_SHOW_REGEX)) {
-    return "overcast_show";
-  } else {
-    return "unknown";
-  }
-};
-
-const buildLinks = async (source, link) => {
+const buildLinks = async (type, platform, link) => {
   var links = [];
-  if (source === "castro_episode") {
-    // get title and iTunes Id
-    const { title, iTunesId } = await castroToItunes(link);
-    links.push(["castro", link]);
 
-    const { url } = await main(iTunesId, title);
-    links.push(["itunes", url]);
+  if (type === "episode") {
+    if (platform === "castro") {
+      // get title and iTunes Id
+      const { title, iTunesId } = await castroToItunes(link);
+      links.push(["castro", link]);
 
-    const spotifyResult = await spotify(title);
-    links.push(["spotify", spotifyResult.url]);
+      const { url } = await main(iTunesId, title);
+      links.push(["itunes", url]);
+
+      const spotifyResult = await spotify(title);
+      links.push(["spotify", spotifyResult.url]);
+    } else if (platform == "overcast") {
+      const { title, iTunesId } = await overcastShowToItunes(link);
+
+      links.push(["overcast", link]);
+
+      const { url } = await main(iTunesId, title);
+      links.push(["itunes", url]);
+
+      const spotifyResult = await spotify(title);
+      links.push(["spotify", spotifyResult.url]);
+    }
   }
+
+  // TODO: add other platforms here
 
   return { title: title, result: links };
 };
@@ -174,18 +173,31 @@ const buildLinks = async (source, link) => {
 const Handler = {
   handle: async (req, res) => {
     if (process.env.NODE_ENV === "development") {
+      const { type, platform } = Helper.detect(req.query.q);
+      console.log(`type: ${type}, platform: ${platform}`);
+
       var urls = [
-        ["spotify", "www.foo.com"],
-        ["itunes", "itunes.com"],
-        ["castro", "castro.fm"]
+        ["spotify", "https://www.spotify.com"],
+        ["itunes", "https://www.itunes.com"],
+        ["overcast", "https://overcast.fm"],
+        ["castro", "https://castro.fm"]
       ];
       res.status(200).json({ title: "Podcast title here", urls });
+      return;
     }
     console.log(req.query);
 
     const startingUrl = req.query.q;
-    const source = detectSource(startingUrl);
-    const { title, result } = await buildLinks(source, startingUrl);
+    const { type, platform } = Helper.detect(startingUrl);
+
+    if (type === "unknown" || platform === "unknown") {
+      res
+        .status(503)
+        .json({ error: "Sorry, I wasn't able to find any links!" });
+
+      return;
+    }
+    const { title, result } = await buildLinks(type, platform, startingUrl);
 
     console.log("RESULT", result);
     res.status(200).json({ title: title, urls: result });

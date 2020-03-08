@@ -6,14 +6,19 @@ const PodResultsContainer = ({ results, title }) => {
     <div>
       <h2 className="title"> {title}</h2>
       <div>
-        <div class="tile is-ancestor">
+        <div className="tile is-ancestor">
           {results.map(result => {
             const [name, url] = result;
             return (
-              <a target="_blank" rel="noopener noreferrer" href={url}>
-                <div class="tile is-parent">
-                  <article class="tile is-child box">
-                    <p class="title">{name}</p>
+              <a
+                target="_blank"
+                rel="noopener noreferrer"
+                key={Math.random()}
+                href={url}
+              >
+                <div className="tile is-parent">
+                  <article className="tile is-child box">
+                    <p className="title">{name}</p>
                   </article>
                 </div>
               </a>
